@@ -54,8 +54,16 @@ const App: React.FC = () => {
   };
 
   const handleDeleteHistory = (id: string) => {
-    if (confirm('ATENÇÃO: A exclusão do histórico é irreversível. Deseja prosseguir?')) {
-      setInventories(prev => prev.filter(i => i.id !== id));
+    const password = prompt('Para excluir esta contagem, digite a senha de autorização:');
+    
+    if (password === null) return; // Usuário cancelou o prompt
+
+    if (password === '102030') {
+      if (confirm('ATENÇÃO: A exclusão do histórico é irreversível. Deseja realmente prosseguir com a exclusão desta contagem?')) {
+        setInventories(prev => prev.filter(i => i.id !== id));
+      }
+    } else {
+      alert('SENHA INCORRETA. A exclusão não foi autorizada.');
     }
   };
 

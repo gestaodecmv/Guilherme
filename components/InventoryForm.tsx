@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, Inventory, InventoryEntry, ProductStatus } from '../types';
 import { calculateConsolidated, formatDecimal } from '../utils/calculations';
-import { Save, AlertCircle, X, ChevronRight, User, Store } from 'lucide-react';
+import { Save, AlertCircle, X, ChevronRight, User, Store, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   products: Product[];
@@ -26,6 +26,7 @@ const InventoryForm: React.FC<Props> = ({ products, inventories, saveInventory, 
   const [date, setDate] = useState(editInventory?.date || new Date().toISOString().split('T')[0]);
   const [entries, setEntries] = useState<InventoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const activeProducts = products.filter(p => p.status === ProductStatus.Active);
 
@@ -62,7 +63,8 @@ const InventoryForm: React.FC<Props> = ({ products, inventories, saveInventory, 
     }));
   };
 
-  const handleSave = () => {
+  const handleOpenConfirmation = () => {
+    setError(null);
     if (!responsible.trim()) {
       alert('POR FAVOR, PREENCHA O NOME DO RESPONSÁVEL.');
       return;
@@ -85,6 +87,10 @@ const InventoryForm: React.FC<Props> = ({ products, inventories, saveInventory, 
       return;
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const handleFinalSave = () => {
     const timestamp = new Date().toLocaleString('pt-BR');
 
     const newInventory: Inventory = {
@@ -98,11 +104,70 @@ const InventoryForm: React.FC<Props> = ({ products, inventories, saveInventory, 
     };
 
     saveInventory(newInventory);
-    onCancel(); // Use cancel to close/return
+    setShowConfirmModal(false);
+    onCancel(); 
   };
+
+  // Calcula quantos itens possuem contagem registrada
+  const itemsWithCount = entries.filter(e => e.totalConsolidated > 0).length;
 
   return (
     <div className="space-y-6">
+      {/* Confirmation Modal Overlay */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all animate-in zoom-in-95 duration-200">
+            <div className="bg-blue-600 p-6 text-white text-center">
+              <CheckCircle2 size={48} className="mx-auto mb-2 text-blue-100" />
+              <h2 className="text-xl font-bold">Confirmação de Registro</h2>
+              <p className="text-blue-100 text-sm">Verifique os dados abaixo antes de salvar</p>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Loja</span>
+                  <span className="font-bold text-gray-900 block truncate">{store}</span>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data</span>
+                  <span className="font-bold text-gray-900 block">{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Responsável</span>
+                <span className="font-bold text-gray-900 block">{responsible}</span>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-blue-50 text-blue-800 rounded-xl border border-blue-100">
+                <AlertCircle size={20} className="flex-shrink-0" />
+                <span className="text-sm">Total de <strong>{itemsWithCount} itens</strong> com quantidades registradas.</span>
+              </div>
+
+              <div className="text-xs text-gray-500 italic text-center px-4 pt-2">
+                Uma vez salvo, você poderá encontrar este registro na aba "Histórico" e exportá-lo para Excel.
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-6 flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 px-4 py-3 text-gray-600 font-semibold hover:bg-gray-200 rounded-xl transition"
+              >
+                Revisar Contagem
+              </button>
+              <button 
+                onClick={handleFinalSave}
+                className="flex-1 px-4 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-2"
+              >
+                <Save size={20} /> Confirmar e Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-4">
@@ -150,7 +215,7 @@ const InventoryForm: React.FC<Props> = ({ products, inventories, saveInventory, 
         <div className="flex gap-2">
            <button onClick={onCancel} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancelar</button>
            <button 
-             onClick={handleSave}
+             onClick={handleOpenConfirmation}
              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-semibold"
            >
              <Save size={20} /> Salvar Inventário
